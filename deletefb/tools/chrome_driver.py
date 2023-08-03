@@ -4,13 +4,13 @@ from clint.textui import puts, colored
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from shutil import which
-from subprocess import check_output
 from urllib.request import urlretrieve
 from appdirs import AppDirs
 from ..version import version
 from os.path import exists
 
 import os, sys, stat, platform
+import subprocess
 import progressbar
 import re
 import zipfile
@@ -44,13 +44,20 @@ def extract_zip(filename, chrome_maj_version):
         sys.exit(1)
 
     # Save the name of the new file
-    new_file_name = f"{cache_dir}/{_file.namelist()[0] + chrome_maj_version}"
+    new_file_name = None
 
     # Extract the file and make it executable
     _file.extractall(path=cache_dir)
 
-    # Rename the filename to a versioned one
-    os.rename(f"{cache_dir}/chromedriver", f"{cache_dir}/chromedriver{chrome_maj_version}")
+    # Check if chromedriver.exe is in a subdirectory
+    driver_folder = os.path.join(cache_dir, f"chromedriver{chrome_maj_version}")
+    if os.path.exists(driver_folder) and os.path.isfile(os.path.join(driver_folder, "chromedriver.exe")):
+        new_file_name = os.path.join(driver_folder, "chromedriver.exe")
+    elif os.path.exists(os.path.join(cache_dir, "chromedriver.exe")):
+        new_file_name = os.path.join(cache_dir, "chromedriver.exe")
+
+    if new_file_name is None:
+        raise ChromeError("Failed to find chromedriver.exe after extraction")
 
     driver_stat = os.stat(new_file_name)
     os.chmod(new_file_name, driver_stat.st_mode | stat.S_IEXEC)
@@ -75,17 +82,23 @@ def parse_version(output):
     """
     return [c for c in re.split('([0-9]+)\.?', output.decode("utf-8")) if all(d.isdigit() for d in c) and c][0]
 
-def get_chrome_version(chrome_binary_path=None):
-    """
-    Extract the chrome major version.
-    """
-    driver_locations = [which(loc) for loc in ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome.exe"]]
-
-    for location in driver_locations:
-        if location:
-            return parse_version(check_output([location, "--version"]).strip())
-    return None
-
+def get_chrome_version():
+    print(f"{os.name}")
+    try:
+        # The command to retrieve Chrome version on all platforms
+        if os.name == 'nt':  # For Windows
+            command = 'reg query "HKEY_CURRENT_USER\Software\Google\Chrome\BLBeacon" /v version'
+            result = subprocess.check_output(command, shell=True).decode("utf-8")
+            version_line = result.strip().split('\n')[-1]
+            version = version_line.split()[2]
+        else:  # For macOS and Linux
+            command = 'google-chrome --version'
+            result = subprocess.check_output(command.split()).decode("utf-8").strip()
+            version = result.split(' ')[2]
+        return version
+    except Exception as e:
+        return f"Error: {e}"
+    
 def construct_driver_url(chrome_binary_path=None):
     """
     Construct a URL to download the Chrome Driver.
@@ -93,9 +106,9 @@ def construct_driver_url(chrome_binary_path=None):
 
     platform_string = platform.system()
     chrome_drivers = {
-        "Windows" : "https://chromedriver.storage.googleapis.com/{0}/chromedriver_win32.zip",
-        "Darwin" : "https://chromedriver.storage.googleapis.com/{0}/chromedriver_mac64.zip",
-        "Linux" : "https://chromedriver.storage.googleapis.com/{0}/chromedriver_linux64.zip"
+        "Windows" : "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/{0}/win64/chromedriver-win64.zip",
+        "Darwin" : "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/{0}/mac-x64/chromedriver-mac-x64.zip",
+        "Linux" : "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/{0}/linux64/chromedriver-linux64.zip"
     }
 
     version = get_chrome_version()
@@ -103,17 +116,16 @@ def construct_driver_url(chrome_binary_path=None):
     if version is None:
         raise ChromeError("Chrome version not found")
 
-    latest_release_url = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{0}".format(version)
+    # Split the version string into parts using the dot as a delimiter
+    parts = version.split('.')
 
-    return version, chrome_drivers.get(platform_string).format(requests.get(latest_release_url).text)
+    # Make the last number after the 3rd dot be 0
+    parts[3] = '0'
 
-    # First, construct a LATEST_RELEASE URL using Chrome's major version number.
-    # For example, with Chrome version 73.0.3683.86, use URL "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_73".
-    # Try to download a small file from this URL. If it successful, the file contains the ChromeDriver version to use.
-    # If the above step failed, reduce the Chrome major version by 1 and try again.
-    # For example, with Chrome version 75.0.3745.4, use URL "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_74"
-    #  to download a small file, which contains the ChromeDriver version to use.
-    # You can also use ChromeDriver Canary build.
+    # Join the parts back together using the dot as a delimiter
+    modified_version = '.'.join(parts)
+
+    return version, chrome_drivers.get(platform_string).format(modified_version)
 
 def get_webdriver(chrome_binary_path):
     """
