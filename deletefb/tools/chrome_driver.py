@@ -119,8 +119,8 @@ def construct_driver_url(chrome_binary_path=None):
     # Split the version string into parts using the dot as a delimiter
     parts = version.split('.')
 
-    # Make the last number after the 3rd dot be 0
-    parts[3] = '0'
+    # Make the last number after the 3rd dot be ...
+    parts[3] = '105'
 
     # Join the parts back together using the dot as a delimiter
     modified_version = '.'.join(parts)
@@ -136,7 +136,8 @@ def get_webdriver(chrome_binary_path):
     # Download it according to the current machine
     chrome_maj_version, chrome_webdriver = construct_driver_url(chrome_binary_path)
 
-    driver_path = f"{cache_dir}/chromedriver{chrome_maj_version}"
+    #windows location
+    driver_path = f"{cache_dir}\chromedriver-win64\chromedriver"
 
     if exists(driver_path):
         return driver_path

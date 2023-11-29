@@ -3,7 +3,7 @@ from .tools.common import logger
 from .tools.config import settings
 from .tools.likes import unlike_pages
 from .tools.login import login
-from .tools.wall import delete_posts
+from .tools.delete import delete_posts
 from .tools.conversations import traverse_conversations
 from .tools.comments import delete_comments
 from .quit_driver import quit_driver_and_reap_children
