@@ -2,6 +2,7 @@ from .chrome_driver import setup_selenium
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
 from ..quit_driver import quit_driver_and_reap_children
+from selenium.webdriver.common.by import By
 
 import time
 
@@ -52,17 +53,17 @@ def login(user_email_address,
         login_button = "loginbutton"
         approvals_code = "approvals_code"
 
-        driver.find_element_by_name(email).send_keys(user_email_address)
-        driver.find_element_by_name(password).send_keys(user_password)
-        driver.find_element_by_id(login_button).click()
+        driver.find_element(By.NAME, email).send_keys(user_email_address)
+        driver.find_element(By.NAME, password).send_keys(user_password)
+        driver.find_element(By.ID, login_button).click()
 
         # Defaults to no 2fa
         has_2fa = False
 
         try:
             # If this element exists, we've reached a 2FA page
-            driver.find_element_by_xpath("//form[@class=\"checkpoint\"]")
-            driver.find_element_by_xpath("//input[@name=\"approvals_code\"]")
+            driver.find_element(By.XPATH, "//form[@class=\"checkpoint\"]")
+            driver.find_element(By.XPATH, "//input[@name=\"approvals_code\"]")
             has_2fa = True
         except NoSuchElementException:
             has_2fa = "two-factor authentication" in driver.page_source.lower() or has_2fa

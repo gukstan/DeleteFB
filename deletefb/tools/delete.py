@@ -11,7 +11,6 @@ import time
 # Used as a threshold to avoid running forever
 MAX_POSTS = settings["MAX_POSTS"]
 
-
 def delete_posts(driver, user_profile_url, year=None):
     """
     Deletes posts from the wall by moving them to trash.
