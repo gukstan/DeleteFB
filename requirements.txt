@@ -5,7 +5,6 @@ bitarray==2.9.2
 bleach==3.3.0
 cattrs==23.2.3
 certifi==2024.7.4
-certifi==2018.11.29
 cffi==1.16.0
 chardet==3.0.4
 charset-normalizer==3.3.2
